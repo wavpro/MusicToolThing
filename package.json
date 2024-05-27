@@ -1,0 +1,17 @@
+{
+  "name": "musictoolthing",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@elysiajs/jwt": "^1.0.2",
+    "@types/fluent-ffmpeg": "^2.1.24",
+    "elysia": "^1.0.22",
+    "fluent-ffmpeg": "^2.1.3"
+  }
+}
