@@ -1,8 +1,9 @@
-<form action="/tracks/upload">
+<form action="/tracks/upload" method="post">
   <label for="title"><b>Title</b></label>
   <input type="text" placeholder="Enter Title" name="title" required />
   <label for="artist"><b>Artist</b></label>
   <input type="text" placeholder="Enter Artist" name="artist" required />
-  <input type="file" id="file" name="file">
-  <input type="submit">
+  <input type="file" id="file" name="cover">
+  <input type="file" id="file" name="track">
+  <button type="submit">Upload</button>
 </form>

@@ -2,7 +2,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs';
 import { log } from '../logging';
 
-export default function format(id: string) {
+export default function format(id: number) {
     if (!fs.existsSync(`data/tracks/${id}`)) {
         return log(`Failed to format track #${id}, no directory to pull data from`);
     }
@@ -11,13 +11,13 @@ export default function format(id: string) {
 
     if (files.includes("audio.wav")) {
         convertToFLAC(id, 'wav');
-        convertToM4A(id, 'wav');
+        //convertToM4A(id, 'wav');
         convertToOGG(id, 'wav');
     } else if (files.includes("audio.flac")) {
-        convertToM4A(id, 'flac');
+        //convertToM4A(id, 'flac');
         convertToOGG(id, 'flac');
     } else if (files.includes("audio.mp3")) {
-        convertToM4A(id, 'mp3');
+        //convertToM4A(id, 'mp3');
         convertToOGG(id, 'mp3');
     } else if (files.includes("audio.m4a")) {
         convertToOGG(id, 'm4a');
@@ -25,7 +25,7 @@ export default function format(id: string) {
     
 }
 
-function convertToFLAC(id: string, extension: string) {
+function convertToFLAC(id: number, extension: string) {
     ffmpeg(`data/tracks/${id}/audio.${extension}`)
         .audioCodec('flac')
         .format('flac')
@@ -34,7 +34,7 @@ function convertToFLAC(id: string, extension: string) {
         .run();
 }
 
-function convertToM4A(id: string, extension: string) {
+function convertToM4A(id: number, extension: string) {
     ffmpeg(`data/tracks/${id}/audio.${extension}`)
         .audioCodec('aac')
         .format('m4a')
@@ -43,7 +43,7 @@ function convertToM4A(id: string, extension: string) {
         .run();
 }
 
-function convertToOGG(id: string, extension: string) {
+function convertToOGG(id: number, extension: string) {
     ffmpeg(`data/tracks/${id}/audio.${extension}`)
         .audioCodec('libopus')
         .format('ogg')
