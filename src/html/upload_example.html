@@ -1,9 +1,11 @@
-<form action="/tracks/upload" method="post">
+<form action="/tracks/upload" method="post" enctype="multipart/form-data">
   <label for="title"><b>Title</b></label>
   <input type="text" placeholder="Enter Title" name="title" required />
   <label for="artist"><b>Artist</b></label>
   <input type="text" placeholder="Enter Artist" name="artist" required />
+  <label for="cover"><b>Cover Art</b></label>
   <input type="file" id="file" name="cover">
-  <input type="file" id="file" name="track">
+  <label for="track"><b>Sound File</b></label>
+  <input type="file" id="file" name="track" required>
   <button type="submit">Upload</button>
 </form>
