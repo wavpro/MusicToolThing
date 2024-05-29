@@ -6,6 +6,7 @@ import fs from 'fs';
 import type { track, user } from "../../data/database.sqlite.ts";
 import format from "./formats.ts";
 import { log } from "../logging/index.ts";
+import processCover from "./cover.ts";
 
 function isSupportedCodec(codec: string): boolean {
     switch (codec) {
@@ -16,6 +17,8 @@ function isSupportedCodec(codec: string): boolean {
         case 'aac':
             return true;
         case 'libmp3lame':
+            return true;
+        case 'mp3 (mp3float)':
             return true;
         default:
             return false;
@@ -38,14 +41,12 @@ function uuidv4(): string {
     );
 }
 
-export default function saveTrack(title: string, artist: string, audioFile: File, coverFile: File, db: Database, user: user): Promise<ErrorResponse | Success> {
+export default function saveTrack(title: string, artist: string, audioFile: File, coverFile: File | null, db: Database, user: user): Promise<ErrorResponse | Success> {
     return new Promise<ErrorResponse | Success>(async (resolve, reject) => {
         const tmpUUID = uuidv4();
         const fileExtension = audioFile.name.match(/\.[^/.]+$/);
         const tmpPath = `./data/tracks/tmp/${tmpUUID}${fileExtension}`;
         const tmpPath2 = `./data/tracks/tmp/${tmpUUID}_2${fileExtension}`;
-
-        const coverArtExtension = getCoverArtFileExtension(coverFile);
 
         fs.writeFileSync(tmpPath, new Int8Array(await audioFile.arrayBuffer()));
         fs.writeFileSync(tmpPath2, '');
@@ -75,15 +76,23 @@ export default function saveTrack(title: string, artist: string, audioFile: File
 
                     fs.mkdirSync('./data/tracks/' + trackInDB.id)
                     fs.copyFileSync(tmpPath2, `./data/tracks/${trackInDB.id}/audio${fileExtension}`)
-                    fs.writeFileSync(`./data/tracks/${trackInDB.id}/cover${coverArtExtension}`, new Int8Array(await coverFile.arrayBuffer()));
+
+                    if (coverFile !== null) {
+                        const coverArtExtension = getCoverArtFileExtension(coverFile);
+                        fs.writeFileSync(`./data/tracks/${trackInDB.id}/cover${coverArtExtension}`, new Int8Array(await coverFile.arrayBuffer()));
+                    }
 
                     format(trackInDB.id)
+                    processCover(trackInDB.id)
 
                     fs.rmSync(tmpPath)
                     fs.rmSync(tmpPath2)
 
                     return resolve(response("Uploaded track, processing", undefined, `/tracks/${trackInDB.id}`))
                 } else {
+                    fs.rmSync(tmpPath)
+                    fs.rmSync(tmpPath2)
+                    console.log(codecData)
                     return resolve(error("validation", "body", "/track", "Unsupported audio codec"));
                 }
             })

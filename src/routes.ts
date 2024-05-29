@@ -43,12 +43,16 @@ export default function router(db: Database) {
 
                     return response("", track);
                 })
+                .get('/upload', Bun.file('src/html/upload_example.html'))
                 .guard(
                     {
                         body: t.Object({
                             title: t.String(),
                             artist: t.String(),
-                            cover: t.File(),
+                            cover: t.Union([
+                                t.String(),
+                                t.Number()
+                            ]),
                             track: t.File()
                         })
                     },
@@ -57,7 +61,7 @@ export default function router(db: Database) {
                             return error("validation", "body", "/track", "Invalid file format");
                         }
 
-                        if (body.cover.type !== "image/jpeg" && body.cover.type !== "image/png") {
+                        if (body.cover && body.cover.type !== "image/jpeg" && body.cover.type !== "image/png") {
                             return error("validation", "body", "/cover", "Invalid file format");
                         }
 
@@ -66,7 +70,6 @@ export default function router(db: Database) {
                 )
         )
         .get('/sign-in', Bun.file('src/html/login_example.html'))
-        .get('/upload', Bun.file('src/html/upload_example.html'))
         .use(initAuth(db))
         .listen(3000);
 }
