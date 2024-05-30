@@ -9,6 +9,13 @@ import { response } from './response/response.ts';
 
 const displayTracksPerLoad = 50;
 
+enum AudioQualities {
+    Opus,
+    FLAC,
+    WAVE,
+    MPEG
+}
+
 export default function router(db: Database) {
     const getTrackQuery = db.query("SELECT * FROM tracks WHERE id = $id;");
     const getTracksByUploaderQuery = db.query(`SELECT * FROM tracks WHERE uploaded_by = $uploader_id LIMIT ${displayTracksPerLoad} OFFSET $offset`)
