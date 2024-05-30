@@ -1,25 +1,28 @@
 import { Elysia, t } from 'elysia'
-import type { Database } from "bun:sqlite";
 import initAuth, { isLoggedIn } from './accounts/auth';
 import jwt from '@elysiajs/jwt';
 import saveTrack from './processing/save_track';
 import { error } from './response/error';
 import type { track, user } from '../data/database.sqlite.ts';
 import { response } from './response/response.ts';
+import { db } from '../data/db.ts';
+import { log } from './logging/index.ts';
+import { getChunkOfFile } from './streaming/chunking_handler.ts';
 
 const displayTracksPerLoad = 50;
 
 enum AudioQualities {
-    Opus,
-    FLAC,
-    WAVE,
-    MPEG
+    Opus = "0",
+    FLAC = "1",
+    WAVE = "2",
+    MPEG = "3",
+    AAC = "4"
 }
 
-export default function router(db: Database) {
-    const getTrackQuery = db.query("SELECT * FROM tracks WHERE id = $id;");
-    const getTracksByUploaderQuery = db.query(`SELECT * FROM tracks WHERE uploaded_by = $uploader_id LIMIT ${displayTracksPerLoad} OFFSET $offset`)
+const getTrackQuery = db.query("SELECT * FROM tracks WHERE id = $id;");
+const getTracksByUploaderQuery = db.query(`SELECT * FROM tracks WHERE uploaded_by = $uploader_id LIMIT ${displayTracksPerLoad} OFFSET $offset`)
 
+export default function router() {
     new Elysia()
         .use(
             jwt({
@@ -39,9 +42,6 @@ export default function router(db: Database) {
                         })
                     },
                     (app) => app
-                        .get('/tracks/:id/audio', ({ params: { id } }) => {
-                            return Bun.file(`data/tracks/${id}/audio.ogg`);
-                        })
                         .get('/tracks/:id/info', async ({ params: { id } }) => {
                             const track = await getTrackQuery.get({ $id: id });
 
@@ -50,6 +50,70 @@ export default function router(db: Database) {
                             }
 
                             return response("", track);
+                        })
+                )
+                .guard(
+                    {
+                        params: t.Object({
+                            id: t.Numeric()
+                        }),
+                        query: t.Object({
+                            quality: t.Enum(AudioQualities)
+                        })
+                    },
+                    (app) => app
+                        .get('/tracks/:id/audio', async ({ params: { id }, query: { quality }, headers, set }) => {
+                            const track = await getTrackQuery.get({ $id: id }) as track | null;
+
+                            if (!track) {
+                                return error("validation", "params", "id", "Track doesn't exist");
+                            }
+
+                            let path: string;
+
+                            switch (quality) {
+                                case AudioQualities.AAC:
+                                    if (track.s_m4a) {
+                                        path = `data/tracks/${id}/audio.m4a`
+                                    } else {
+                                        return error("validation", "query", "quality", "Selected quality doesn't exist on track");
+                                    }
+                                    break;
+                                case AudioQualities.FLAC:
+                                    if (track.s_flac) {
+                                        path = `data/tracks/${id}/audio.flac`
+                                    } else {
+                                        return error("validation", "query", "quality", "Selected quality doesn't exist on track");
+                                    }
+                                    break;
+                                case AudioQualities.MPEG:
+                                    if (track.s_mp3) {
+                                        path = `data/tracks/${id}/audio.mp3`
+                                    } else {
+                                        return error("validation", "query", "quality", "Selected quality doesn't exist on track");
+                                    }
+                                    break;
+                                case AudioQualities.Opus:
+                                    if (track.s_ogg) {
+                                        path = `data/tracks/${id}/audio.ogg`
+                                    } else {
+                                        return error("validation", "query", "quality", "Selected quality doesn't exist on track");
+                                    }
+                                    break;
+                                case AudioQualities.WAVE:
+                                    if (track.s_wav) {
+                                        path = `data/tracks/${id}/audio.wav`
+                                    } else {
+                                        return error("validation", "query", "quality", "Selected quality doesn't exist on track");
+                                    }
+                                    break;
+                                // Won't happen since elysia validation
+                                default:
+                                    log('Uh oh this shouldn\'t have happened #3593')
+                                    path = '';
+                            }
+
+                            return getChunkOfFile(path, headers, set);
                         })
                 )
                 .guard(
@@ -97,7 +161,7 @@ export default function router(db: Database) {
 
                         let tracks = (getTracksByUploaderQuery.all({
                             $uploader_id: id,
-                            $offset: p*displayTracksPerLoad
+                            $offset: p * displayTracksPerLoad
                         }) as track | track[] | null) || []
 
                         if (!Array.isArray(tracks)) {
@@ -123,7 +187,7 @@ export default function router(db: Database) {
                         })
                     },
                     (app) => app.post('/tracks/upload', async ({ body, jwt: { verify }, cookie: { auth } }) => {
-                        return await saveTrack(body.title, body.artist, body.track, body.cover || null, db, await verify(auth.value) as user);
+                        return await saveTrack(body.title, body.artist, body.track, body.cover || null, await verify(auth.value) as user);
                     })
                 )
         )

@@ -1,12 +1,14 @@
 import { error, type ErrorResponse } from "../response/error";
 import { response, type Success } from "../response/response";
-import type { Database } from "bun:sqlite";
 import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs';
 import type { track, user } from "../../data/database.sqlite.ts";
 import format from "./formats.ts";
 import { log } from "../logging/index.ts";
 import processCover from "./cover.ts";
+import { db } from "../../data/db.ts";
+
+const createTrackQuery = db.query(`INSERT INTO tracks (title, artist, uploaded_by, s_mp3, s_ogg, s_flac, s_wav, s_m4a) VALUES ($title, $artist, $uploaded_by, $s_mp3, $s_ogg, $s_flac, $s_wav, $s_m4a) RETURNING *;`)
 
 function isSupportedCodec(codec: string): boolean {
     switch (codec) {
@@ -15,6 +17,8 @@ function isSupportedCodec(codec: string): boolean {
         case 'flac':
             return true;
         case 'aac':
+            return true;
+        case 'wav':
             return true;
         case 'libmp3lame':
             return true;
@@ -25,7 +29,7 @@ function isSupportedCodec(codec: string): boolean {
     }
 }
 function getCoverArtFileExtension(file: File): string {
-    switch(file.type) {
+    switch (file.type) {
         case 'image/jpeg':
             return '.jpg';
         case 'image/png':
@@ -41,10 +45,17 @@ function uuidv4(): string {
     );
 }
 
-export default function saveTrack(title: string, artist: string, audioFile: File, coverFile: File | null, db: Database, user: user): Promise<ErrorResponse | Success> {
+export default function saveTrack(title: string, artist: string, audioFile: File, coverFile: File | null, user: user): Promise<ErrorResponse | Success> {
     return new Promise<ErrorResponse | Success>(async (resolve, reject) => {
         const tmpUUID = uuidv4();
-        const fileExtension = audioFile.name.match(/\.[^/.]+$/);
+        let fileExtension = audioFile.name.match(/\.[^/.]+$/)?.[0];
+
+        let isM4a = false,
+            isMp3 = false,
+            isOgg = false,
+            isWav = false,
+            isFlac = false;
+
         const tmpPath = `./data/tracks/tmp/${tmpUUID}${fileExtension}`;
         const tmpPath2 = `./data/tracks/tmp/${tmpUUID}_2${fileExtension}`;
 
@@ -64,35 +75,77 @@ export default function saveTrack(title: string, artist: string, audioFile: File
                 return resolve(error("server", "body", "/track", "FFMPEG error"));
             })
             .on('end', async () => {
+                console.log(codecData.format);
                 /* Potentially add check for supported format here, as file extensions aren't surefire, check codecData.format */
                 if (isSupportedCodec(codecData.audio)) {
-                    const createTrackQuery = db.query(`INSERT INTO tracks (title, artist, uploaded_by) VALUES ($title, $artist, $uploaded_by) RETURNING *;`)
+                    switch (codecData.format) {
+                        case 'M4a':
+                            isM4a = true;
+                            break;
+                        case 'ogg':
+                            isOgg = true;
+                            break;
+                        case 'mp3':
+                            isMp3 = true;
+                            break;
+                        case 'wav':
+                            isWav = true;
+                            break;
+                        default:
+                            isFlac = true;
+                            break;
+                    }
+
+                    fileExtension = `.${codecData.format}`;
 
                     const trackInDB = createTrackQuery.get({
                         $title: title,
                         $artist: artist,
-                        $uploaded_by: user.id
+                        $uploaded_by: user.id,
+                        $s_mp3: isMp3,
+                        $s_ogg: isOgg,
+                        $s_flac: isFlac,
+                        $s_wav: isWav,
+                        $s_m4a: isM4a
                     }) as track
 
                     fs.mkdirSync('./data/tracks/' + trackInDB.id)
-                    fs.copyFileSync(tmpPath2, `./data/tracks/${trackInDB.id}/audio${fileExtension}`)
 
-                    if (coverFile !== null) {
-                        const coverArtExtension = getCoverArtFileExtension(coverFile);
-                        fs.writeFileSync(`./data/tracks/${trackInDB.id}/cover${coverArtExtension}`, new Int8Array(await coverFile.arrayBuffer()));
+                    if (isFlac && codecData.format !== 'flac') {
+                        ffmpeg(tmpPath2)
+                            .audioCodec('flac')
+                            .format('flac')
+                            .audioBitrate(1411)
+                            .output(`data/tracks/${trackInDB.id}/audio.flac`)
+                            .on('end', () => afterFileIsCopied())
+                            .run();
+                    } else {
+                        fs.copyFileSync(tmpPath2, `./data/tracks/${trackInDB.id}/audio${fileExtension}`);
+
+                        afterFileIsCopied();
                     }
 
-                    format(trackInDB.id)
-                    processCover(trackInDB.id)
-
-                    fs.rmSync(tmpPath)
-                    fs.rmSync(tmpPath2)
-
-                    return resolve(response("Uploaded track, processing", undefined, `/tracks/${trackInDB.id}`))
+                    // This is regrettable but best solution I can come up with currently
+                    async function afterFileIsCopied() {
+                        if (coverFile !== null) {
+                            const coverArtExtension = getCoverArtFileExtension(coverFile);
+                            fs.writeFileSync(`./data/tracks/${trackInDB.id}/cover${coverArtExtension}`, new Int8Array(await coverFile.arrayBuffer()));
+                        }
+    
+                        format(trackInDB.id)
+                        processCover(trackInDB.id)
+    
+                        fs.rmSync(tmpPath)
+                        fs.rmSync(tmpPath2)
+    
+                        return resolve(response("Uploaded track, processing", undefined, `/tracks/${trackInDB.id}`))
+                    }
                 } else {
                     fs.rmSync(tmpPath)
                     fs.rmSync(tmpPath2)
-                    console.log(codecData)
+
+                    log(`Unsupported audio codec: ${codecData.audio}`)
+
                     return resolve(error("validation", "body", "/track", "Unsupported audio codec"));
                 }
             })

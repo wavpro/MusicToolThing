@@ -19,6 +19,11 @@ export default function setup(db: Database) {
             title text NOT NULL,
             artist text NOT NULL,
             uploaded_by integer NOT NULL,
+            s_mp3 integer DEFAULT 0,
+            s_ogg integer DEFAULT 0,
+            s_flac integer DEFAULT 0,
+            s_wav integer DEFAULT 0,
+            s_m4a integer DEFAULT 0,
             FOREIGN KEY (uploaded_by) REFERENCES \`users\`(\`id\`)
         );`).run();
     }
@@ -34,4 +39,9 @@ export type track = {
     title: string;
     artist: string;
     uploaded_by: number;
+    s_mp3: boolean;
+    s_ogg: boolean;
+    s_flac: boolean;
+    s_wav: boolean;
+    s_m4a: boolean;
 }

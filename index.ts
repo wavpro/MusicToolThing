@@ -1,11 +1,6 @@
-import { Database } from "bun:sqlite";
-import { join } from "path";
 import setup from "./data/database.sqlite.ts";
 import router from "./src/routes";
-
-const DBPath = join(import.meta.dir, "data", "database.sqlite");
-
-const db = new Database(DBPath, { create: true });
+import { db } from "./data/db.ts";
 
 setup(db);
-router(db);
+router();
