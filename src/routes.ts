@@ -11,7 +11,7 @@ import { getChunkOfFile } from './streaming/chunking_handler.ts';
 
 const displayTracksPerLoad = 50;
 
-enum AudioQualities {
+export enum AudioQualities {
     Opus = "0",
     FLAC = "1",
     WAVE = "2",
@@ -35,6 +35,7 @@ export default function router() {
                 //@ts-ignore
                 beforeHandle: isLoggedIn
             }, (app) => app
+                .get('player', Bun.file('src/html/player.html'))
                 .guard(
                     {
                         params: t.Object({
@@ -113,7 +114,17 @@ export default function router() {
                                     path = '';
                             }
 
-                            return getChunkOfFile(path, headers, set);
+                            const [response, rHeaders, status] = await getChunkOfFile(path, headers, quality);
+
+                            for (let header in rHeaders) {
+                                set.headers[header] = rHeaders[header];
+                            }
+
+                            console.log(set.headers);
+                            
+                            set.status = status;
+
+                            return response;
                         })
                 )
                 .guard(
