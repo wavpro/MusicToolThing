@@ -8,7 +8,7 @@ import { log } from "../logging/index.ts";
 import processCover from "./cover.ts";
 import { db } from "../../data/db.ts";
 
-const createTrackQuery = db.query(`INSERT INTO tracks (title, artist, uploaded_by, s_mp3, s_ogg, s_flac, s_wav, s_m4a) VALUES ($title, $artist, $uploaded_by, $s_mp3, $s_ogg, $s_flac, $s_wav, $s_m4a) RETURNING *;`)
+const createTrackQuery = db.query(`INSERT INTO tracks (title, artist, duration, uploaded_by, s_mp3, s_ogg, s_flac, s_wav, s_m4a) VALUES ($title, $artist, $duration, $uploaded_by, $s_mp3, $s_ogg, $s_flac, $s_wav, $s_m4a) RETURNING *;`)
 
 function isSupportedCodec(codec: string): boolean {
     switch (codec) {
@@ -27,6 +27,11 @@ function isSupportedCodec(codec: string): boolean {
         default:
             return false;
     }
+}
+function ffmpegDurationToMs(duration: string): bigint {
+    const [_, hours, minutes, seconds, centiseconds] = duration.match(/^(\d+):(\d+):(\d+)\.(\d+)$/) ?? [0, 0, 0, 0, 0];
+
+    return BigInt(hours) * 3600000n + BigInt(minutes) * 60000n + BigInt(seconds) * 1000n + BigInt(centiseconds) * 10n;
 }
 function getCoverArtFileExtension(file: File): string {
     switch (file.type) {
@@ -97,10 +102,13 @@ export default function saveTrack(title: string, artist: string, audioFile: File
                     }
 
                     fileExtension = `.${codecData.format}`;
+                    
+                    const duration = ffmpegDurationToMs(codecData.duration);
 
                     const trackInDB = createTrackQuery.get({
                         $title: title,
                         $artist: artist,
+                        $duration: duration,
                         $uploaded_by: user.id,
                         $s_mp3: isMp3,
                         $s_ogg: isOgg,

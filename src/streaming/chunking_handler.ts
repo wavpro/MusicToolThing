@@ -3,6 +3,8 @@ import { error, type ErrorResponse } from "../response/error";
 import { AudioQualities } from "../routes";
 import fs from 'fs'
 
+const chunk_size = 1024 * 1024 * 2;
+
 type Status = number;
 type Headers = Record<string, string>;
 
@@ -24,29 +26,43 @@ function getContentType(quality: AudioQualities): string {
 }
 
 export async function getChunkOfFile(filepath: string, headers: Record<string, string | undefined>, quality: AudioQualities): Promise<[BunFile | ErrorResponse, Headers, Status]> {
-    const file = Bun.file(filepath, { type: getContentType(quality) });
-
-    try {
-        file.text();
-    } catch(e) {
-        return [error("server", "body", "file", "File doesn't exist"), {}, 500];
+    const file = Bun.file(filepath, { type: getContentType(quality) })
+    if (!await file.exists()) {
+        return [error("validation", "body", "file", "File doesn't exist"), {}, 404];
     }
 
-    if (headers.range !== undefined) {
-        const chunk = 1048576;
-        let [start = 0, end = Infinity] = headers.range.split('=')?.[1]?.split('-').map(Number) || headers.range.split('-').map(Number);
-        if (end == 0) end = start + (chunk < file.size ? start + chunk : file.size);
+    if (headers.range !== undefined && headers.range !== "bytes=0-") {
+        // @ts-ignore
+        const [start = 0, end = file.size - 1] = headers
+            // @ts-ignore
+            .range // bytes=0-100
+            .split("=") // ["bytes", "0-100"]
+            .at(-1) // "0-100"
+            .split("-") // ["0", "100"]
+            .map((x, _, whole) => {
+                if (x === '') {
+                    return parseInt(whole[0]) + chunk_size;
+                }
 
-        return [file.slice(start, end), {
-            'Content-Range': 'bytes ' + start + '-' + end + '/' + file.size,
-            'Content-Type': getContentType(quality)
-        }, 206];
-    } else {
-        return [file, {
-            'Content-Range': 'bytes ' + 0 + '-' + file.size + '/' + file.size,
-            'Content-Type': getContentType(quality)
-        }, 200];
+                return +x;
+            }) // [0, 100]
+
+        return [file.slice(start, end + 1), {
+            "content-range": `bytes ${start}-${end}/${file.size}`,
+            "content-type": getContentType(quality),
+            "accept-ranges": "bytes"
+        }, 206]
     }
+
+    return [file, {
+        'content-range': 'bytes ' + 0 + '-' + file.size + '/' + file.size,
+        'content-type': getContentType(quality)
+    }, 200];
+}
+export function getFileSize(filepath: string): number {
+    const file = Bun.file(filepath);
+
+    return file.size;
 }
 
 async function getFile(filePath: string, start: number, end: number): Promise<Blob> {

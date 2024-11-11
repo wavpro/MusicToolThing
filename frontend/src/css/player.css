@@ -1,0 +1,62 @@
+body {
+  margin: 0;
+}
+
+#player {
+  background: gray;
+  width: 100vw;
+  height: 72px;
+  position: absolute;
+  bottom: 0;
+}
+#player > #line {
+  background: red;
+  height: 2px;
+  margin-bottom: 10px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+#player > #play-button {
+  z-index: 999 !important;
+  font-size: 30px;
+  position: absolute;
+  left: 50px;
+  top: 0;
+  bottom: 0;
+  margin: auto 0;
+  align-items: center;
+  display: flex;
+  user-select: none;
+}
+#player > #info {
+  position: absolute;
+  left: 0;
+  height: 100%;
+  width: 50%;
+  display: flex;
+  align-items: center;
+  padding-left: 25%;
+  padding-right: 25%;
+}
+#thumbnail {
+  height: 64px;
+  width: 64px;
+  margin-right: 10px;
+}
+#tartist {
+  margin-right: 10px;
+}
+#title {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: 900;
+}
+#artist {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: 500;
+}
+#player > audio {
+  display: none;
+}

@@ -4,6 +4,7 @@ import type { Database } from "bun:sqlite";
 import type { user } from '../../data/database.sqlite.ts';
 import { log } from '../logging/index.ts';
 import { error, type ErrorResponse } from '../response/error.ts';
+import { response } from '../response/response.ts';
 
 export default function initAuth(db: Database) {
     const getUserQuery = db.query(`SELECT * FROM users WHERE username = $username;`);
@@ -28,7 +29,12 @@ export default function initAuth(db: Database) {
                     .post('/auth/sign-up', async ({ body: { username, password }, jwt, cookie: { auth } }) => {
                         const user = getUserQuery.get({ $username: username }) as user | null;
                         if (user) {
-                            return "User already exists"
+                            return error("validation", "body", "username", "Username is already taken");
+                        }
+
+                        const [passwordValid, passwordValidReason] = validatePassword(password);
+                        if (!passwordValid) {
+                            return error("validation", "body", "password", passwordValidReason);
                         }
 
                         try {
@@ -37,55 +43,67 @@ export default function initAuth(db: Database) {
                             const user = getUserQuery.get({ $username: username }) as user | null;
                             
                             if (!user) {
-                                throw new Error();
+                                throw new Error("No such user after createUserQuery");
                             }
 
+                            const profile = { username, id: user.id };
+
                             auth.set({
-                                value: await jwt.sign({ username, id: user.id }),
+                                value: await jwt.sign(profile),
                                 httpOnly: true,
                                 maxAge: 7 * 86400
                             })
 
-                            return `Signed up as ${username}`
+                            return response('', profile, '/');
                         } catch (e) {
-                            log('Failed to sign up as ' + username)
+                            log((e as Error).toString());
 
-                            return 'Failed to sign up'
+                            return error("server", "internal", null, "Failed to sign up timestamp " + new Date().toString());
                         }
                     })
                     .post(
                         '/auth/sign-in',
                         async ({ body: { username, password }, jwt, cookie }) => {
                             const user = getUserQuery.get({ $username: username }) as user | null;
-                            if (!user) {
-                                return "No such user"
+
+                            if (!user || !(await Bun.password.verify(password, user.password))) {
+                                return error("validation", "body", "username|password", "Invalid username or password")
                             }
 
-                            if (!(await Bun.password.verify(password, user.password))) {
-                                return 'Incorrect password'
-                            }
+                            const profile = { username, id: user.id };
 
                             cookie.auth.set({
-                                value: await jwt.sign({ username, id: user.id}),
+                                value: await jwt.sign(profile),
                                 httpOnly: false,
                                 maxAge: 7 * 86400
-                            })
+                            });
 
-                            return `Signed in as ${username}`
+                            return response('', profile, "/");
                         }
                     )
         )
         .guard(
             {
-                beforeHandle: async ({ jwt: { verify }, cookie: { auth } }) => await verify(auth.value)
+                beforeHandle: async ({ jwt: { verify }, cookie: { auth } }) => {
+                    if (!await verify(auth.value)) {
+                        return error("authentication", "cookies", null, "Unathorized access");
+                    }
+                }
             },
             (app) =>
                 app
-                    .get('/auth/profile', async ({ jwt: { verify }, cookie: { auth: { value } } }) => await verify(value))
-                    .get('/auth/sign-out', async ({ cookie: { auth } }) => {
+                    .get('/auth/profile', async ({ jwt: { verify }, cookie: { auth: { value } } }) => {
+                        const profile = await verify(value);
+                        if (!profile) {
+                            return error("authentication", "cookies", null, "Invalid JWT token");
+                        }
+
+                        return response('', profile);
+                    })
+                    .post('/auth/sign-out', async ({ cookie: { auth } }) => {
                         auth.remove();
 
-                        return 'Signed out';
+                        return response('', {});
                     })
         )
 }
@@ -99,6 +117,23 @@ export async function isLoggedIn({ jwt: { verify }, cookie: { auth } }: {
     if (await verify(auth.value) === false) {
         return error('authentication', 'cookies', null, 'Unathorized access')
     }
+}
+
+function validatePassword(password: string): [boolean, string] {
+    const result: [boolean, string] = [true, 'Password is valid'];
+
+    if (password.length < 7) {
+        result[0] = false;
+        result[1] = 'Password should be at least 7 characters long';
+    }
+    if (password.length > 1024) {
+        result[0] = false;
+        result[1] = 'Password should not exceed 1024 characters';
+    }
+
+    // Add more checks for password viability/security
+
+    return result;
 }
 
 export type authCookie = {

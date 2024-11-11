@@ -2,7 +2,7 @@ import type { Response } from "./response"
 
 export type ErrorResponse = Response & {
     type: "validation" | "server" | "authentication",
-    on: "body" | "query" | "params" | "cookies",
+    on: "body" | "query" | "params" | "cookies" | "internal",
     property?: string,
     message: string
 }

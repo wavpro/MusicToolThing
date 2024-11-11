@@ -18,6 +18,7 @@ export default function setup(db: Database) {
             id integer PRIMARY KEY AUTOINCREMENT,
             title text NOT NULL,
             artist text NOT NULL,
+            duration integer NOT NULL,
             uploaded_by integer NOT NULL,
             s_mp3 integer DEFAULT 0,
             s_ogg integer DEFAULT 0,

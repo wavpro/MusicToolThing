@@ -1,4 +1,5 @@
 import { Elysia, t } from 'elysia'
+import { cors } from '@elysiajs/cors'
 import initAuth, { isLoggedIn } from './accounts/auth';
 import jwt from '@elysiajs/jwt';
 import saveTrack from './processing/save_track';
@@ -7,7 +8,9 @@ import type { track, user } from '../data/database.sqlite.ts';
 import { response } from './response/response.ts';
 import { db } from '../data/db.ts';
 import { log } from './logging/index.ts';
-import { getChunkOfFile } from './streaming/chunking_handler.ts';
+import { getChunkOfFile, getFileSize } from './streaming/chunking_handler.ts';
+import { Stream } from '@elysiajs/stream';
+import fs from 'fs';
 
 const displayTracksPerLoad = 50;
 
@@ -30,6 +33,7 @@ export default function router() {
                 secret: process.env.secret || ""
             })
         )
+        .use(cors())
         .guard(
             {
                 //@ts-ignore
@@ -53,6 +57,8 @@ export default function router() {
                             return response("", track);
                         })
                 )
+                // Only used by guard below
+                .state('path', '')
                 .guard(
                     {
                         params: t.Object({
@@ -60,12 +66,9 @@ export default function router() {
                         }),
                         query: t.Object({
                             quality: t.Enum(AudioQualities)
-                        })
-                    },
-                    (app) => app
-                        .get('/tracks/:id/audio', async ({ params: { id }, query: { quality }, headers, set }) => {
+                        }),
+                        beforeHandle: async ({ params: { id }, query: { quality }, store }) => {
                             const track = await getTrackQuery.get({ $id: id }) as track | null;
-
                             if (!track) {
                                 return error("validation", "params", "id", "Track doesn't exist");
                             }
@@ -114,17 +117,25 @@ export default function router() {
                                     path = '';
                             }
 
+                            store.path = path;
+                        }
+                    },
+                    (app) => app
+                        .get('/tracks/:id/audio', async ({ query: { quality }, headers, set, store: { path } }) => {
                             const [response, rHeaders, status] = await getChunkOfFile(path, headers, quality);
 
                             for (let header in rHeaders) {
                                 set.headers[header] = rHeaders[header];
                             }
 
-                            console.log(set.headers);
-                            
                             set.status = status;
 
                             return response;
+                        })
+                        .get('/tracks/:id/size', async ({ store: { path } }) => {
+                            const fileSize = getFileSize(path);
+
+                            return response('', { fileSize });
                         })
                 )
                 .guard(
@@ -143,6 +154,13 @@ export default function router() {
                     },
                     (app) => app
                         .get('/tracks/:id/cover', async ({ params: { id }, query: { size } }) => {
+                            if (id === 0) {
+                                if (size === "1000") {
+                                    return Bun.file(`data/pre_made_img/default_cover.png`);
+                                }
+
+                                return Bun.file(`data/pre_made_img/default_cover_${size}.png`);
+                            }
                             if (size === "1000") {
                                 return Bun.file(`data/tracks/${id}/cover.png`);
                             }
@@ -204,5 +222,5 @@ export default function router() {
         )
         .get('/sign-in', Bun.file('src/html/login_example.html'))
         .use(initAuth(db))
-        .listen(3000);
+        .listen(parseInt(process.env.BACKEND_PORT || "4000"));
 }
