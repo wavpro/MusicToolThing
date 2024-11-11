@@ -180,3 +180,4 @@ dist
 /data/database.sqlite
 /data/tracks
 /log.txt
+/.env
