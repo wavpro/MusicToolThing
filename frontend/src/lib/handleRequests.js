@@ -74,3 +74,16 @@ export function authProfile() {
             .catch(error => reject(error));
     })
 }
+
+/**
+ * Returns URL of audio track
+ */
+export function createTrackAudioSource(track_id, quality) {
+    return `${DOMAIN}/tracks/${track_id}/audio?quality=${quality}`;
+}
+/**
+ * Returns URL of audio cover
+ */
+export function createTrackAudioCover(track_id, size) {
+    return `${DOMAIN}/tracks/${track_id}/cover?size=${size}`;
+}
