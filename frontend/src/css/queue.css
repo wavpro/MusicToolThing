@@ -1,0 +1,54 @@
+#queue {
+  width: calc(36vw - 10px);
+  height: calc(100% - 10px);
+  margin-bottom: 10px;
+  overflow-y: auto;
+}
+#queue > #no-tracks {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    margin: 0;
+    font-size: 18px;
+    color: black;
+    text-align: center;
+  
+}
+.queue-track {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
+}
+.queue-track.selected-track {
+  background-color: lightgray;
+}
+.queue-track.not-selected-track {
+  background-color: darkgray;
+}
+
+.queue-tartist {
+  margin-right: 10px;
+}
+.queue-title {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: 900;
+}
+.queue-artist {
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: 500;
+  font-size: 14px
+}
+
+.queue-track > img {
+  width: 48px;
+  height: 48px;
+  margin-right: 10px;
+  margin: 5px;
+}

@@ -9,6 +9,8 @@ import NoPage from "./pages/NoPage";
 
 import { authProfile } from "./lib/handleRequests.js";
 
+import './css/global.css';
+
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 import { faTwitter, faFontAwesome } from '@fortawesome/free-brands-svg-icons'
@@ -23,21 +25,19 @@ export const UserContext = createContext(null);
   artist: string;
   currentTime: number;
   duration: number;
-  thumbnailUrl: string;
-  paused: boolean;
-}*/
+  thumbnails: {
+    [size: string]: string;
+  };
+}
+*/
 
 export default function App() {
   const [user, setUser] = useState(null);
-  const [playing, setPlaying] = useState({
-    id: 1,
-    title: "No song playing",
-    artist: "Artist 1",
-    currentTime: 0,
-    duration: 0,
-    thumbnailUrl: "http://localhost:4000/tracks/0/cover?size=64",
-    paused: true,
+  const [queue, setQueue] = useState({
+    position: 0,
+    tracks: []
   });
+  const [playing, setPlaying] = useState(queue.tracks[queue.position]);
 
   useEffect(() => {
     authProfile()
@@ -52,7 +52,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <UserContext.Provider value={{ user, setUser, playing, setPlaying }}>
+      <UserContext.Provider value={{ user, setUser, playing, setPlaying, queue, setQueue }}>
         <Routes>
           <Route path="/" element={<Layout />}>
             <Route index element={<Home />} />

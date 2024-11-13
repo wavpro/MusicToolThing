@@ -179,7 +179,7 @@ export default function router() {
                         ]))
                     })
                 }, (app) => app
-                    .get('/tracks/uploaded-by/:id', async ({ params: { id }, query: { p } }) => {
+                    .get('/users/:id/tracks', async ({ params: { id }, query: { p } }) => {
                         if (!p) {
                             p = 0
                         }

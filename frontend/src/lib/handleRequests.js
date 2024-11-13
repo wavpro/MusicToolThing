@@ -32,6 +32,22 @@ export function getTrackSize(id, quality) {
             .catch(error => reject(error));
     })
 }
+export function getTracksUploadedByUser(user_id) {
+    return new Promise((resolve, reject) => {
+        fetch(DOMAIN + `/users/${user_id}/tracks`, {
+            credentials: "include"
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    resolve(data.data);
+                } else {
+                    reject(data.message);
+                }
+            })
+            .catch(error => reject(error));
+    })
+}
 
 export function authIn(username, password) {
     return new Promise((resolve, reject) => {
