@@ -33,7 +33,7 @@ export async function getChunkOfFile(filepath: string, headers: Record<string, s
 
     if (headers.range !== undefined && headers.range !== "bytes=0-") {
         // @ts-ignore
-        const [start = 0, end = file.size - 1] = headers
+        let [start = 0, end = file.size - 1] = headers
             // @ts-ignore
             .range // bytes=0-100
             .split("=") // ["bytes", "0-100"]
@@ -46,6 +46,10 @@ export async function getChunkOfFile(filepath: string, headers: Record<string, s
 
                 return +x;
             }) // [0, 100]
+
+        if (end + 1 > file.size) {
+            end = file.size - 1
+        }
 
         return [file.slice(start, end + 1), {
             "content-range": `bytes ${start}-${end}/${file.size}`,

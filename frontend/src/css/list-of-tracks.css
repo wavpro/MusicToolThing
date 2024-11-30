@@ -1,0 +1,20 @@
+.tracklist {
+  list-style-type: none;
+  padding: 0;
+}
+.tracklist > .track {
+  height: var(--tracklist-track-height);
+  width: 50%;
+  display: flex;
+  align-items: center;
+}
+.tracklist > .track > img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  margin-right: 10px;
+}
+.tracklist > .track > button {
+    margin-left: auto;
+    cursor: pointer;
+}

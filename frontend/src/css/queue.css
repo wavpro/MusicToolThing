@@ -5,15 +5,18 @@
   overflow-y: auto;
 }
 #queue > #no-tracks {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    margin: 0;
-    font-size: 18px;
-    color: black;
-    text-align: center;
-  
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  margin: 0;
+  font-size: 18px;
+  color: black;
+  text-align: center;
+  cursor: default;
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-select: none;
 }
 .queue-track {
   width: 100%;
@@ -25,10 +28,10 @@
   -webkit-user-select: none;
 }
 .queue-track.selected-track {
-  background-color: lightgray;
+  background-color: var(--queue-track-background-color);
 }
 .queue-track.not-selected-track {
-  background-color: darkgray;
+  background-color: var(--queue-track-selected-background-color);
 }
 
 .queue-tartist {
@@ -43,7 +46,7 @@
   margin-top: 0;
   margin-bottom: 0;
   font-weight: 500;
-  font-size: 14px
+  font-size: 14px;
 }
 
 .queue-track > img {
@@ -51,4 +54,10 @@
   height: 48px;
   margin-right: 10px;
   margin: 5px;
+}
+
+.queue-track-button-remove {
+  margin-right: 10px;
+  margin-left: auto;
+  cursor: pointer;
 }

@@ -76,14 +76,20 @@ export function authIn(username, password) {
 
 export function authProfile() {
     return new Promise((resolve, reject) => {
+        if (localStorage.getItem("profile") && JSON.parse(localStorage.getItem("profile"))?.expires > Date.now()) {
+            return resolve(JSON.parse(localStorage.getItem("profile")));
+        }
+
         fetch(DOMAIN + "/auth/profile", {
             credentials: "include"
         })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    localStorage.setItem("profile", JSON.stringify(data.data));
                     resolve(data.data);
                 } else {
+                    localStorage.removeItem("profile");
                     reject(data);
                 }
             })

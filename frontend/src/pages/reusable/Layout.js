@@ -2,13 +2,18 @@ import { useContext } from 'react'
 import { Outlet, Link } from "react-router-dom";
 import { authIn } from "../../lib/handleRequests";
 import { UserContext } from '../../index.js';
+import Player from "../../lib/Player/Player.js";
+
+import "../../css/layout.css"
 
 const Layout = () => {
   const { user, setUser } = useContext(UserContext);
 
+  console.log(user);
+
   if (!user) {
     return <button onClick={() => {
-      authIn("admin", "admin")
+      authIn("admin", "admin77")
         .then((data) => {
           setUser(data.data);
         })
@@ -20,21 +25,12 @@ const Layout = () => {
   }
 
   return <>
-    <nav>
-      <ul>
-        <li>
-          <Link to="/">Home</Link>
-        </li>
-        <li>
-          <Link to="/blogs">Blogs</Link>
-        </li>
-        <li>
-          <Link to="/profile">Contact</Link>
-        </li>
-      </ul>
+    <nav id="top-bar">
     </nav>
-
-    <Outlet />
+    <div id="main-content">
+      <Outlet />
+    </div>
+    <Player />
   </>
 };
 

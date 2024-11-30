@@ -6,6 +6,8 @@ import { log } from '../logging/index.ts';
 import { error, type ErrorResponse } from '../response/error.ts';
 import { response } from '../response/response.ts';
 
+const MAX_AGE = 7 * 86400;
+
 export default function initAuth(db: Database) {
     const getUserQuery = db.query(`SELECT * FROM users WHERE username = $username;`);
     const createUserQuery = db.query(`INSERT INTO users (username, password) VALUES ($username, $password);`);
@@ -46,12 +48,12 @@ export default function initAuth(db: Database) {
                                 throw new Error("No such user after createUserQuery");
                             }
 
-                            const profile = { username, id: user.id };
+                            const profile = { username, id: user.id, expires: Date.now() + (MAX_AGE * 1000) };
 
                             auth.set({
                                 value: await jwt.sign(profile),
                                 httpOnly: true,
-                                maxAge: 7 * 86400
+                                maxAge: MAX_AGE
                             })
 
                             return response('', profile, '/');
@@ -70,12 +72,12 @@ export default function initAuth(db: Database) {
                                 return error("validation", "body", "username|password", "Invalid username or password")
                             }
 
-                            const profile = { username, id: user.id };
+                            const profile = { username, id: user.id, expires: Date.now() + (MAX_AGE * 1000) };
 
                             cookie.auth.set({
                                 value: await jwt.sign(profile),
                                 httpOnly: false,
-                                maxAge: 7 * 86400
+                                maxAge: MAX_AGE
                             });
 
                             return response('', profile, "/");
@@ -92,8 +94,8 @@ export default function initAuth(db: Database) {
             },
             (app) =>
                 app
-                    .get('/auth/profile', async ({ jwt: { verify }, cookie: { auth: { value } } }) => {
-                        const profile = await verify(value);
+                    .get('/auth/profile', async ({ jwt: { verify }, cookie: { auth } }) => {
+                        const profile = await verify(auth.value);
                         if (!profile) {
                             return error("authentication", "cookies", null, "Invalid JWT token");
                         }

@@ -66,13 +66,18 @@ const Player = () => {
         currentTime: 0,
         duration: 0,
         thumbnails: {
-          "64": "http://localhost:4000/tracks/0/cover?size=64",
-          "128": "http://localhost:4000/tracks/0/cover?size=128",
-          "512": "http://localhost:4000/tracks/0/cover?size=512",
-          "1000": "http://localhost:4000/tracks/0/cover?size=1000"
+            "64": "http://localhost:4000/tracks/0/cover?size=64",
+            "128": "http://localhost:4000/tracks/0/cover?size=128",
+            "512": "http://localhost:4000/tracks/0/cover?size=512",
+            "1000": "http://localhost:4000/tracks/0/cover?size=1000"
         }
-      };
+    };
+
     const setPlaying = (n) => {
+        if (n.id === -1) {
+            return;
+        }
+
         let tracks = [...queue.tracks];
         tracks[queue.position] = n;
 
@@ -100,7 +105,8 @@ const Player = () => {
                 forwardOneStep();
             });
             navigator.mediaSession.setActionHandler("seekto", (action, fastSeek, __, seekTime) => {
-                // implement
+                // Some browsers give seekto event without giving a seekTime mfw ಠ_ಠ
+                if (seekTime) play(seekTime * 1000);
             });
             navigator.mediaSession.setActionHandler("previoustrack", () => {
                 goPreviousTrack();
@@ -109,6 +115,16 @@ const Player = () => {
                 goNextTrack();
             });
         }
+    }
+
+    function setPositionState(at, playbackRate = 1) {
+        console.log(at);
+        at = at ?? 0;
+        navigator.mediaSession.setPositionState({
+            duration: playing.duration / 1000,
+            playbackRate,
+            position: at / 1000
+        });
     }
 
     function isPlaying() {
@@ -145,6 +161,8 @@ const Player = () => {
         }
 
         setPlaying(newPlaying);
+        setLinePercentage(((newPlaying.currentTime / newPlaying.duration) * 100).toFixed(2));
+        setPositionState(at);
         startMediaSession();
     }
 
@@ -163,6 +181,8 @@ const Player = () => {
         }
 
         setPlaying(newPlaying);
+        setLinePercentage(((newPlaying.currentTime / newPlaying.duration) * 100).toFixed(2));
+        setPositionState(at);
         startMediaSession();
     }
 
@@ -170,30 +190,32 @@ const Player = () => {
         const audio = document.querySelector("#player > audio");
 
         const cTime = audio.currentTime * 1000;
+        // I wouldn't have checked if it was within duration thx tabnine love ya bb
         const newCTime = Math.min(playing.duration, cTime + STEP_SIZE_MS);
 
         setPlaying({
-            ...playing, 
-            // I wouldn't have checked if it was within duration thx tabnine love ya bb
+            ...playing,
             currentTime: newCTime
         })
 
         audio.currentTime = newCTime / 1000;
+        setPositionState(newCTime);
         startMediaSession();
     }
     function backwardOneStep() {
         const audio = document.querySelector("#player > audio");
 
         const cTime = audio.currentTime * 1000;
+        // I wouldn't have checked if it was within duration thx tabnine love ya bb
         const newCTime = Math.max(0, cTime - STEP_SIZE_MS);
 
         setPlaying({
-            ...playing, 
-            // I wouldn't have checked if it was within duration thx tabnine love ya bb
+            ...playing,
             currentTime: newCTime
         })
 
         audio.currentTime = newCTime / 1000;
+        setPositionState(newCTime);
         startMediaSession();
     }
 
@@ -268,6 +290,8 @@ const Player = () => {
 
     useInterval(() => {
         if (!isPlaying()) return;
+
+        setPositionState(playing.currentTime);
 
         setLinePercentage(((playing.currentTime / playing.duration) * 100).toFixed(2));
     }, 1000)

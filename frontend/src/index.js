@@ -14,8 +14,9 @@ import './css/global.css';
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { fas } from '@fortawesome/free-solid-svg-icons'
 import { faTwitter, faFontAwesome } from '@fortawesome/free-brands-svg-icons'
+import { far } from '@fortawesome/free-regular-svg-icons'
 
-library.add(fas, faTwitter, faFontAwesome)
+library.add(fas, faTwitter, faFontAwesome, far)
 
 export const UserContext = createContext(null);
 
@@ -42,7 +43,6 @@ export default function App() {
   useEffect(() => {
     authProfile()
       .then((user) => {
-        console.log(user);
         setUser(user);
       })
       .catch((error) => {

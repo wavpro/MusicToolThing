@@ -3,9 +3,9 @@ body {
 }
 
 #player {
-  background: gray;
+  background: var(--outer-ui-background-color);
   width: 100vw;
-  height: 72px;
+  height: var(--player-height);
   position: absolute;
   bottom: 0;
 }
@@ -38,13 +38,13 @@ body {
   height: 3px;
   width: 100vw;
   transition: 0.2s 0.5s;
-  background-color: gray;
+  background-color: var(--outer-ui-background-color);
   position: absolute;
 }
 #player > #line > #linefill {
   z-index: 999;
   width: 0%;
-  background: red;
+  background: var(--player-line-fill-color);
   opacity: 0.9;
   height: 3px;
   transition: 0.2s 0.5s;
@@ -55,7 +55,7 @@ body {
   border-radius: 25px;
   width: 5px;
   height: 5px;
-  background: red;
+  background: var(--player-line-fill-color);
   opacity: 0;
   transition: 0.2s 0.5s;
   position: absolute;
@@ -173,7 +173,7 @@ body {
   top: 0;
   width: 36vw;
   height: 50vh;
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--outer-ui-background-color);
   padding: 10px;
   border-radius: 5px;
   transform: translate(calc(-1 * 1vw), calc(-1 * 50vh - 36px));
